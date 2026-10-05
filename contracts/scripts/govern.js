@@ -189,8 +189,19 @@ async function registerPool(ctx) {
 async function status({ d, provider, timelock }) {
   const head = await provider.getBlockNumber();
   const events = [];
-  for (let from = d.startBlock ?? 0; from <= head; from += LOG_CHUNK) {
-    events.push(...(await timelock.queryFilter(timelock.filters.CallScheduled(), from, Math.min(from + LOG_CHUNK - 1, head))));
+  // Free RPC plans cap eth_getLogs ranges; fall back to the public Robinhood RPC for this read.
+  const scan = async (tl) => {
+    const out = [];
+    for (let from = d.startBlock ?? 0; from <= head; from += LOG_CHUNK) {
+      out.push(...(await tl.queryFilter(tl.filters.CallScheduled(), from, Math.min(from + LOG_CHUNK - 1, head))));
+    }
+    return out;
+  };
+  try {
+    events.push(...(await scan(timelock)));
+  } catch {
+    const pub = new ethers.JsonRpcProvider(config.network.rpcUrl, config.network.chainId, { staticNetwork: true });
+    events.push(...(await scan(new ethers.Contract(d.timelock, TIMELOCK_ABI, pub))));
   }
   if (!events.length) return console.log("No timelock actions have ever been scheduled.");
   const names = { [d.drawdownRetire.toLowerCase()]: "DrawdownRetire", [d.swapAdapter.toLowerCase()]: "V4SwapAdapter", [d.oracle.toLowerCase()]: "FountOracle", [d.feeRouter.toLowerCase()]: "FeeRouter", [d.registry.toLowerCase()]: "FountRegistry", [d.timelock.toLowerCase()]: "Timelock" };

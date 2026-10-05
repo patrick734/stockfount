@@ -67,6 +67,10 @@ echo "Deploy during US market hours (6:30 AM to 1:00 PM PT) so stock prices are 
 read -r -p "Type DEPLOY to continue: " answer </dev/tty
 [[ "$answer" == "DEPLOY" ]] || stop "Cancelled. Nothing was sent."
 if ! node ../tools/with-key.js "$DEPLOYER_ACCOUNT" -- npx hardhat run scripts/deploy.js --network robinhood; then
+  if [[ -f deployments/robinhood.json ]]; then
+    node scripts/export-abis.js
+    stop "StockFount IS deployed (deployments/robinhood.json); only the checks after it failed. Do not deploy again: run ./verify.sh."
+  fi
   stop "The deploy did not finish (see above). Contracts from a half-finished attempt hold nothing and are never listed by the app; once the cause is fixed, run ./launch.sh again for a full fresh set."
 fi
 

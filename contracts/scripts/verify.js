@@ -7,6 +7,47 @@ const path = require("path");
 
 const MIN_DELAY = 48n * 3600n;
 
+/**
+ * Role events for several contracts in one sweep. Free RPC plans cap eth_getLogs ranges (Alchemy free: 10
+ * blocks), so: one request on the given RPC, then one on the public Robinhood RPC, then 10-block chunks.
+ */
+async function roleLogs(ethers, addresses, fromBlock) {
+  const iface = new ethers.Interface([
+    "event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender)",
+    "event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender)",
+  ]);
+  const topics = [[iface.getEvent("RoleGranted").topicHash, iface.getEvent("RoleRevoked").topicHash]];
+  const toBlock = await ethers.provider.getBlockNumber();
+  const filter = (from, to) => ({ address: addresses, topics, fromBlock: from, toBlock: to });
+  const parse = (logs) => logs.map((l) => ({ address: l.address.toLowerCase(), ...iface.parseLog(l) }));
+  try {
+    return parse(await ethers.provider.getLogs(filter(fromBlock, toBlock)));
+  } catch {}
+  const config = require("../config/robinhood.json");
+  if (config.network.chainId === Number((await ethers.provider.getNetwork()).chainId)) {
+    const pub = new ethers.JsonRpcProvider(config.network.rpcUrl, config.network.chainId, { staticNetwork: true });
+    for (let i = 0; i < 2; i++) {
+      try {
+        return parse(await pub.getLogs(filter(fromBlock, toBlock)));
+      } catch {}
+    }
+  }
+  const out = [];
+  for (let from = fromBlock; from <= toBlock; from += 10) {
+    const to = Math.min(from + 9, toBlock);
+    for (let tries = 0; ; tries++) {
+      try {
+        out.push(...(await ethers.provider.getLogs(filter(from, to))));
+        break;
+      } catch (e) {
+        if (tries >= 3) throw e;
+        await new Promise((r) => setTimeout(r, 500 * (tries + 1)));
+      }
+    }
+  }
+  return parse(out);
+}
+
 async function verifyDeployment(ethers, d, { requireMultisigs = false } = {}) {
   let failures = 0;
   const check = (ok, msg) => {
@@ -29,7 +70,12 @@ async function verifyDeployment(ethers, d, { requireMultisigs = false } = {}) {
   }
   check(await tl.hasRole(R.proposer, d.roles.admin), "admin multisig can propose");
   check(!(await tl.hasRole(R.admin, d.roles.admin)), "admin multisig cannot bypass the timelock's own role management");
-  const tlGrants = await tl.queryFilter(tl.filters.RoleGranted(R.admin), fromBlock);
+  const accessControlled = [
+    ["DrawdownRetire", d.drawdownRetire],
+    ...Object.entries(d.founts).map(([t, f]) => [`Fount ${t}`, f.fount]),
+  ];
+  const logs = await roleLogs(ethers, [d.timelock, ...accessControlled.map(([, a]) => a)], fromBlock);
+  const tlGrants = logs.filter((l) => l.address === d.timelock.toLowerCase() && l.name === "RoleGranted" && l.args.role === R.admin);
   check(tlGrants.every((e) => same(e.args.account, d.timelock)), "only the timelock administers itself");
 
   if (requireMultisigs) {
@@ -40,10 +86,6 @@ async function verifyDeployment(ethers, d, { requireMultisigs = false } = {}) {
   }
 
   console.log("Role holders");
-  const accessControlled = [
-    ["DrawdownRetire", d.drawdownRetire],
-    ...Object.entries(d.founts).map(([t, f]) => [`Fount ${t}`, f.fount]),
-  ];
   for (const [label, address] of accessControlled) {
     const c = await ethers.getContractAt("Fount", address); // same AccessControl ABI
     const expected = {
@@ -52,8 +94,11 @@ async function verifyDeployment(ethers, d, { requireMultisigs = false } = {}) {
       [await c.KEEPER_ROLE()]: d.roles.keeper,
     };
     const holders = new Map();
-    for (const e of await c.queryFilter(c.filters.RoleGranted(), fromBlock)) holders.set(`${e.args.role}:${e.args.account.toLowerCase()}`, [e.args.role, e.args.account]);
-    for (const e of await c.queryFilter(c.filters.RoleRevoked(), fromBlock)) holders.delete(`${e.args.role}:${e.args.account.toLowerCase()}`);
+    for (const e of logs.filter((l) => l.address === address.toLowerCase())) {
+      const k = `${e.args.role}:${e.args.account.toLowerCase()}`;
+      if (e.name === "RoleGranted") holders.set(k, [e.args.role, e.args.account]);
+      else holders.delete(k);
+    }
     const unexpected = [...holders.values()].filter(([role, account]) => !same(expected[role], account));
     check(unexpected.length === 0 && holders.size === 3, `${label}: exactly timelock admin, guardian, keeper`);
     check(!(await c.hasRole(await c.DEFAULT_ADMIN_ROLE(), d.deployer)), `${label}: deployer has no admin role`);

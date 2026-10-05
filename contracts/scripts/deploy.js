@@ -161,7 +161,15 @@ async function main() {
   fs.writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
   console.log(`\nWrote ${path.relative(process.cwd(), file)}\n`);
 
-  const failures = await verifyDeployment(ethers, out, { requireMultisigs: REAL_ROLES && process.env.ALLOW_PLAIN_WALLETS !== "1" });
+  let failures;
+  try {
+    failures = await verifyDeployment(ethers, out, { requireMultisigs: REAL_ROLES && process.env.ALLOW_PLAIN_WALLETS !== "1" });
+  } catch (e) {
+    console.error(`\nThe contracts ARE deployed (${path.relative(process.cwd(), file)}), but verification could not finish:`);
+    console.error(`  ${e.shortMessage || e.message}`);
+    console.error("Do NOT deploy again. Run ./verify.sh to finish the checks.");
+    process.exit(3);
+  }
   if (failures) {
     console.error(`\n${failures} verification check(s) failed. Do not announce this deployment.`);
     process.exitCode = 1;
