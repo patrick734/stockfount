@@ -56,7 +56,7 @@ if [[ $REHEARSAL == 1 ]]; then
     stop "The rehearsal failed (see above). A dropped connection shows up here too: set ROBINHOOD_RPC_URL to a private RPC and run again."
   fi
   [[ -f deployments/fork.json ]] || stop "The rehearsal ended without writing its record, so it did not complete. Run again."
-  rm -f deployments/fork.json
+  rm -f deployments/fork.json deployments/hardhat.json
   printf '\nREHEARSAL PASSED. Nothing was sent. Deploy for real with: ./launch.sh\n'
   exit 0
 fi

@@ -154,7 +154,8 @@ async function main() {
 
   if (!LIVE) await seedLocal(out, env, rest);
 
-  const label = REAL_ROLES ? network.name : LIVE ? "fork" : network.name;
+  // Only a real mainnet deploy may write robinhood.json; a fork rehearsal always writes fork.json.
+  const label = network.name === "robinhood" ? "robinhood" : LIVE ? "fork" : network.name;
   const file = path.join(__dirname, "..", "deployments", `${label}.json`);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
@@ -164,7 +165,7 @@ async function main() {
   if (failures) {
     console.error(`\n${failures} verification check(s) failed. Do not announce this deployment.`);
     process.exitCode = 1;
-  } else if (LIVE) {
+  } else if (network.name === "robinhood") {
     console.log("\nNext, once $FOUNT graduates on Pons: node scripts/register-fount-pool.js (the admin multisig schedules it)");
   }
 }
