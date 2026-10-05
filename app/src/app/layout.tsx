@@ -9,10 +9,8 @@ const display = Fraunces({ subsets: ["latin"], variable: "--font-display", displ
 const body = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-mono", display: "swap" });
 
-// Absolute base for link-preview images: NEXT_PUBLIC_SITE_URL (your domain), else Vercel's production URL.
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://stockfount.fun");
+// Absolute base for link-preview images. NEXT_PUBLIC_SITE_URL overrides the production domain.
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://stockfount.fun";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
