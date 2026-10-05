@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@500;600&family=IBM+Plex+Mono:wght@500&display=block" rel="stylesheet">
+<style>
+html,body{margin:0;width:1500px;height:500px;overflow:hidden}
+body{background:#f5f1e8;font-family:Inter,sans-serif;color:#13203a;position:relative}
+.glow1{position:absolute;width:900px;height:600px;right:-200px;top:-260px;background:radial-gradient(closest-side,rgba(31,79,216,.16),transparent)}
+.glow2{position:absolute;width:700px;height:500px;left:-200px;bottom:-300px;background:radial-gradient(closest-side,rgba(224,83,47,.14),transparent)}
+.ripples{position:absolute;right:120px;top:50%;transform:translateY(-50%);width:340px;height:340px}
+.ripples span{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(31,79,216,.22)}
+.ripples span:nth-child(2){inset:45px;border-color:rgba(31,79,216,.32)}
+.ripples span:nth-child(3){inset:90px;border-color:rgba(31,79,216,.45)}
+.drop{position:absolute;right:222px;top:50%;width:136px;height:136px;margin-top:-72px;filter:drop-shadow(0 18px 34px rgba(19,32,58,.25))}
+.copy{position:absolute;left:470px;top:92px;width:640px}
+.eyebrow{font:600 15px/1 "IBM Plex Mono",monospace;letter-spacing:.14em;text-transform:uppercase;color:#1f4fd8;margin-bottom:22px}
+h1{font-family:Fraunces,serif;font-weight:600;font-size:60px;line-height:1.04;margin:0;letter-spacing:-.01em}
+h1 em{font-style:italic;color:#1f4fd8}
+.chips{display:flex;gap:10px;margin-top:28px;flex-wrap:wrap}
+.chip{font:500 15px/1 Inter,sans-serif;padding:10px 14px;border-radius:999px;background:#fff;border:1px solid #e4ddcf}
+.chip b{color:#e0532f}
+</style></head><body>
+<div class="glow1"></div><div class="glow2"></div>
+<div class="ripples"><span></span><span></span><span></span></div><svg class="drop" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2d5ef0"/><stop offset="1" stop-color="#173fb3"/></linearGradient></defs><path fill="url(#g)" d="M50 4 C50 4 16 44 16 64 A34 34 0 0 0 84 64 C84 44 50 4 50 4 Z"/><path d="M34 62 a17 17 0 0 0 12 20" fill="none" stroke="#f5f1e8" stroke-width="6" stroke-linecap="round" opacity=".8"/></svg>
+<div class="copy">
+  <div class="eyebrow">StockFount · Robinhood Chain</div>
+  <h1>Liquidity for tokenized stocks, <em>with nobody holding the keys.</em></h1>
+  <div class="chips"><span class="chip">70% of fees to depositors</span><span class="chip"><b>30%</b> buys &amp; burns $FOUNT</span><span class="chip">48h public timelock</span></div>
+</div>
+</body></html>

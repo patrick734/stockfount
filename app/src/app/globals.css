@@ -75,8 +75,8 @@ main { max-width: 1180px; margin: 0 auto; padding: 0.5rem 20px 4rem; min-height:
 .header { position: relative; max-width: 1180px; margin: 0 auto; display: flex; align-items: center; gap: 1.75rem; padding: 1.1rem 20px; }
 .brand { display: flex; align-items: center; gap: 0.65rem; font-family: var(--display); font-weight: 700; letter-spacing: 0.01em; font-size: 1.2rem; color: var(--text); }
 .brand:hover { text-decoration: none; }
-.brand-mark { width: 22px; height: 22px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg); background: linear-gradient(135deg, var(--accent), var(--accent-2)); position: relative; flex: none; }
-.brand-mark::after { content: ""; position: absolute; width: 7px; height: 7px; right: 4px; top: 4px; border-radius: 50%; background: var(--surface); opacity: 0.85; }
+.brand-mark { width: 24px; height: 24px; flex: none; fill: var(--accent); }
+.brand-mark-shine { fill: none; stroke: var(--surface); stroke-width: 7; stroke-linecap: round; opacity: 0.85; }
 .nav { display: flex; gap: 1.35rem; flex: 1; }
 .nav a { color: var(--muted); font-weight: 600; font-size: 0.95rem; }
 .nav a.active, .nav a:hover { color: var(--text); text-decoration: none; }
