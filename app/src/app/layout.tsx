@@ -9,8 +9,21 @@ const display = Fraunces({ subsets: ["latin"], variable: "--font-display", displ
 const body = Inter({ subsets: ["latin"], variable: "--font-body", display: "swap" });
 const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-mono", display: "swap" });
 
+// Absolute base for link-preview images: NEXT_PUBLIC_SITE_URL (your domain), else Vercel's production URL.
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "StockFount",
+  openGraph: {
+    title: "StockFount",
+    description: "Liquidity for tokenized stocks on Robinhood Chain, with nobody holding the keys.",
+    siteName: "StockFount",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image", title: "StockFount", description: "Liquidity for tokenized stocks on Robinhood Chain, with nobody holding the keys." },
   description:
     "Deposit USDG into a Fount. StockFount provides oracle-guarded liquidity for tokenized stocks on Robinhood Chain, pays 70% of trading fees to depositors, and burns $FOUNT with the rest. Every admin action waits 48 hours in a public timelock.",
 };
