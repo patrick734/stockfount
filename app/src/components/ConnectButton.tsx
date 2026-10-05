@@ -96,8 +96,8 @@ export function ConnectButton() {
 
 function NoWallet() {
   const here = typeof window !== "undefined" ? window.location : undefined;
-  const target = here ? `${here.host}${here.pathname}` : "stockfount.com";
-  const full = here ? here.href : "https://stockfount.com";
+  const target = here ? `${here.host}${here.pathname}` : "stockfount.fun";
+  const full = here ? here.href : "https://stockfount.fun";
   const mobile = typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
   return (
     <div className="connect-pop" role="dialog" aria-label="No wallet found">

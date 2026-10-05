@@ -12,7 +12,7 @@ const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], 
 // Absolute base for link-preview images: NEXT_PUBLIC_SITE_URL (your domain), else Vercel's production URL.
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://stockfount.fun");
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
