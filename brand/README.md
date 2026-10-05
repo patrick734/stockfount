@@ -6,3 +6,4 @@
 
 Colors: cobalt `#1f4fd8`, deep cobalt `#173fb3`, coral `#e0532f`, cream `#f5f1e8`, ink `#13203a`.
 Fonts: Fraunces (headlines), Inter (text), IBM Plex Mono (labels).
+- `stockfount-how-to.mp4`: 81-second walkthrough (connect, pick a Fount, deposit, exits, safety page, portfolio), 1280×720, recorded on a local test deployment.
