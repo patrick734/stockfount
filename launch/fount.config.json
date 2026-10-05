@@ -1,0 +1,22 @@
+{
+  "name": "StockFount",
+  "symbol": "FOUNT",
+  "logo": "",
+  "description": "StockFount: oracle-guarded liquidity Founts for tokenized stocks on Robinhood Chain. 30% of every Fount's trading fees buy $FOUNT and burn it.",
+  "socials": {
+    "twitter": "",
+    "telegram": "",
+    "discord": "",
+    "website": "",
+    "farcaster": ""
+  },
+  "launchConfigId": 0,
+  "pairToken": "0x0000000000000000000000000000000000000000",
+  "creatorFeeRecipient": "",
+  "creatorTaxBps": 0,
+  "buybackEnabled": true,
+  "salt": "",
+  "snipeTaxExemptions": [],
+  "devBuyEth": "0",
+  "devBuySlippageBps": 300
+}
