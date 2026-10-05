@@ -110,7 +110,7 @@ async function main() {
   const file = process.env.DEPLOYMENT || path.join(__dirname, "..", "deployments", `${hre.network.name}.json`);
   const d = JSON.parse(fs.readFileSync(file, "utf8"));
   console.log(`Verifying ${path.relative(process.cwd(), file)} on ${hre.network.name}\n`);
-  const failures = await verifyDeployment(hre.ethers, d, { requireMultisigs: hre.network.name === "robinhood" });
+  const failures = await verifyDeployment(hre.ethers, d, { requireMultisigs: hre.network.name === "robinhood" && process.env.ALLOW_PLAIN_WALLETS !== "1" });
   if (failures) process.exitCode = 1;
 }
 

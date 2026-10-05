@@ -26,8 +26,9 @@ done
 DEPLOYER_ADDRESS=$(node tools/wallet.js address "$DEPLOYER_ACCOUNT")
 export DEPLOYER_ADDRESS
 echo "Dev wallet:   $DEPLOYER_ADDRESS ($DEPLOYER_ACCOUNT) deploys, then holds no power"
-echo "Admin Safe:   $ADMIN_MULTISIG (proposes to the 48h timelock)"
-echo "Guardian Safe:$GUARDIAN_MULTISIG (can only pause)"
+echo "Admin:        $ADMIN_MULTISIG (proposes to the 48h timelock)"
+echo "Guardian:     $GUARDIAN_MULTISIG (can only pause)"
+[[ "${ALLOW_PLAIN_WALLETS:-}" == "1" ]] && echo "              admin and guardian are plain wallets (ALLOW_PLAIN_WALLETS=1)"
 echo "Keeper:       $KEEPER_ADDRESS"
 if [[ -n "${FOUNT_TOKEN_ADDRESS:-}" ]]; then echo "\$FOUNT:       $FOUNT_TOKEN_ADDRESS"; else echo "\$FOUNT:       not launched yet; set it later with ./set-token.sh"; fi
 [[ -n "${ROBINHOOD_RPC_URL:-}" ]] && echo "RPC:          private RPC from launch.env" || echo "RPC:          public Robinhood RPC (set ROBINHOOD_RPC_URL if it keeps dropping)"

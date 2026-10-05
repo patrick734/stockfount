@@ -56,7 +56,7 @@ const KNOWN = new ethers.Interface([
 function load() {
   if (!fs.existsSync(DEPLOYMENT)) throw new Error("No contracts/deployments/robinhood.json. Deploy first with ./launch.sh.");
   const d = JSON.parse(fs.readFileSync(DEPLOYMENT, "utf8"));
-  const provider = new ethers.JsonRpcProvider(RPC, config.network.chainId, { staticNetwork: true });
+  const provider = new ethers.JsonRpcProvider(RPC);
   return { d, provider, timelock: new ethers.Contract(d.timelock, TIMELOCK_ABI, provider) };
 }
 
@@ -78,7 +78,8 @@ function write(file, obj) {
 }
 
 /** Writes schedule + execute files for one timelock call. */
-async function prepare({ d, timelock }, slug, title, target, data, salt) {
+async function prepare(ctx, slug, title, target, data, salt) {
+  const { d, timelock } = ctx;
   const delay = await timelock.getMinDelay();
   const tl = new ethers.Interface(TIMELOCK_ABI);
   const id = await timelock.hashOperation(target, 0, data, ethers.ZeroHash, salt);
@@ -94,9 +95,42 @@ async function prepare({ d, timelock }, slug, title, target, data, salt) {
     const ready = await timelock.isOperationReady(id);
     console.log(ready ? "Already scheduled and READY: submit the execute file now." : `Already scheduled; executable after ${new Date(ts * 1000).toISOString()}.`);
   }
+  const mode = process.env.GOVERN_SEND;
+  if (mode) return send(ctx, mode, { schedule, execute, pending, id });
+  const isWallet = (await ctx.provider.getCode(d.roles.admin)) === "0x";
+  if (isWallet) {
+    console.log(`\nThe admin ${d.roles.admin} is a plain wallet. Send it from there with:`);
+    console.log(`  1. Now:            ${ctx.cmd} --schedule`);
+    console.log(`  2. After ${Number(delay) / 3600} hours:  ${ctx.cmd} --execute   (check with: ./govern.sh status)`);
+    return;
+  }
   console.log(`\nIn the admin Safe ${d.roles.admin} on app.safe.global:`);
   console.log(`  1. Now:            Apps > Transaction Builder > drag in ${a} > Create batch > sign with the owners`);
   console.log(`  2. After ${Number(delay) / 3600} hours:  same with ${b}  (anyone can check with: ./govern.sh status)`);
+}
+
+/** Sends the schedule or execute call from the admin wallet (ADMIN_PRIVATE_KEY, set by tools/with-key.js). */
+async function send(ctx, mode, { schedule, execute, pending, id }) {
+  const { d, provider, timelock } = ctx;
+  if (!process.env.ADMIN_PRIVATE_KEY) throw new Error("no admin key: run this through ./set-token.sh or ./govern.sh with --schedule or --execute");
+  const wallet = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, provider);
+  if (wallet.address.toLowerCase() !== d.roles.admin.toLowerCase()) {
+    throw new Error(`ADMIN_ACCOUNT is ${wallet.address}, but the timelock's admin is ${d.roles.admin}.`);
+  }
+  if (mode === "schedule" && pending) return console.log("\nAlready scheduled. Run the same command with --execute once it is ready.");
+  if (mode === "execute") {
+    if (!pending) throw new Error("not scheduled yet. Run the same command with --schedule first.");
+    if (!(await timelock.isOperationReady(id))) {
+      const ts = Number(await timelock.getTimestamp(id));
+      throw new Error(`not ready yet: executable after ${new Date(ts * 1000).toISOString()}.`);
+    }
+  }
+  if (mode !== "schedule" && mode !== "execute") throw new Error(`unknown mode ${mode}`);
+  const tx = await wallet.sendTransaction({ to: d.timelock, data: mode === "schedule" ? schedule : execute });
+  console.log(`\n${mode} sent: ${config.network.explorer}/tx/${tx.hash}`);
+  const r = await tx.wait();
+  if (r.status !== 1) throw new Error("the transaction reverted");
+  console.log(mode === "schedule" ? "Scheduled. Run the same command with --execute after the delay." : "Executed.");
 }
 
 async function setToken(ctx, address) {
@@ -120,6 +154,7 @@ async function setToken(ctx, address) {
     throw new Error(`DrawdownRetire is already set to ${current}; it can only be set once.`);
   }
   if ((await dd.maxInputPerRun(token)) !== 0n) throw new Error("This token is configured as a fee input; that must be cleared first.");
+  ctx.cmd = `./set-token.sh ${token}`;
   await prepare(ctx, "set-token", `Set $FOUNT to ${symbol}`, d.drawdownRetire, dd.interface.encodeFunctionData("setFountToken", [token]), ethers.id(`stockfount:set-token:${token.toLowerCase()}`));
   console.log("\nAfter it executes, buy-and-burn still waits for $FOUNT to graduate on Pons: then run ./govern.sh register-pool");
 }
@@ -147,6 +182,7 @@ async function registerPool(ctx) {
   }
   console.log(`Pons pool live: ${p.fountPerEth.toFixed(0)} FOUNT per ETH, liquidity ${p.liquidity}`);
   const adapter = new ethers.Interface(["function setPool((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) key)"]);
+  ctx.cmd = "./govern.sh register-pool";
   await prepare(ctx, "register-pool", "Register the $FOUNT/ETH pool", d.swapAdapter, adapter.encodeFunctionData("setPool", [p.key]), ethers.id(`stockfount:register-pool:${token.toLowerCase()}`));
 }
 
@@ -176,6 +212,10 @@ async function status({ d, provider, timelock }) {
 async function main() {
   const [cmd, arg] = process.argv.slice(2);
   const ctx = load();
+  const chainId = Number((await ctx.provider.getNetwork()).chainId);
+  if (chainId !== config.network.chainId && process.env.STOCKFOUNT_LOCAL_TEST !== "1") {
+    throw new Error(`the RPC is on chain ${chainId}, not Robinhood Chain (${config.network.chainId}). Check ROBINHOOD_RPC_URL in launch.env.`);
+  }
   if (cmd === "set-token") return setToken(ctx, arg);
   if (cmd === "register-pool") return registerPool(ctx);
   if (cmd === "status") return status(ctx);

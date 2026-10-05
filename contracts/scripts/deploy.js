@@ -6,8 +6,9 @@
 //   Robinhood Chain:             npx hardhat run scripts/deploy.js --network robinhood
 //
 // Live deploys read from env:
-//   ADMIN_MULTISIG       proposer/executor of the timelock (a multisig contract)
-//   GUARDIAN_MULTISIG    may pause and lower caps (a different multisig contract)
+//   ADMIN_MULTISIG       proposer/executor of the timelock (a multisig contract, or a plain wallet with
+//                        ALLOW_PLAIN_WALLETS=1)
+//   GUARDIAN_MULTISIG    may pause and lower caps (a different multisig or wallet)
 //   KEEPER_ADDRESS       rebalances, harvests and runs buy-and-burn (a hot wallet, not the deployer)
 //   FOUNT_TOKEN_ADDRESS  optional: $FOUNT if it is already launched on Pons. Usually left empty: the protocol
 //                        deploys first and the timelock sets $FOUNT once after the Pons launch (set-token.sh).
@@ -159,7 +160,7 @@ async function main() {
   fs.writeFileSync(file, JSON.stringify(out, null, 2) + "\n");
   console.log(`\nWrote ${path.relative(process.cwd(), file)}\n`);
 
-  const failures = await verifyDeployment(ethers, out, { requireMultisigs: REAL_ROLES });
+  const failures = await verifyDeployment(ethers, out, { requireMultisigs: REAL_ROLES && process.env.ALLOW_PLAIN_WALLETS !== "1" });
   if (failures) {
     console.error(`\n${failures} verification check(s) failed. Do not announce this deployment.`);
     process.exitCode = 1;
@@ -172,7 +173,7 @@ async function checkRoles(roles, deployer) {
   const all = [roles.admin, roles.guardian, roles.keeper].map((a) => a.toLowerCase());
   if (new Set(all).size !== all.length) throw new Error("admin, guardian and keeper must be three different addresses");
   if (all.includes(deployer.toLowerCase())) throw new Error("the deployer must not hold any role: use a fresh wallet for deploying");
-  if (REAL_ROLES) {
+  if (REAL_ROLES && process.env.ALLOW_PLAIN_WALLETS !== "1") {
     for (const name of ["admin", "guardian"]) {
       if ((await ethers.provider.getCode(roles[name])) === "0x") throw new Error(`${name} ${roles[name]} must be a multisig contract, not a plain wallet`);
     }

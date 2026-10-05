@@ -52,7 +52,8 @@ async function main() {
     const code = await withRetry(() => provider.getCode(v));
     const isContract = code !== "0x";
     const wantsContract = name !== "KEEPER_ADDRESS";
-    if (wantsContract && !isContract) fail(`${name} ${roles[name]} is a plain wallet; it must be a multisig contract`);
+    if (wantsContract && !isContract && process.env.ALLOW_PLAIN_WALLETS === "1") ok(`${name} ${roles[name]} (plain wallet, allowed by ALLOW_PLAIN_WALLETS=1)`);
+    else if (wantsContract && !isContract) fail(`${name} ${roles[name]} is a plain wallet; it must be a multisig contract (or set ALLOW_PLAIN_WALLETS=1 in launch.env)`);
     else ok(`${name} ${roles[name]}${isContract ? " (contract)" : ""}`);
   }
   const set = Object.values(roles);

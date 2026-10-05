@@ -24,14 +24,21 @@ on-chain.
 - The repo cloned: `git clone https://github.com/patrick734/stockfount && cd stockfount`
 - About 0.03 ETH on Robinhood Chain for the dev wallet, and 0.01 ETH for the keeper
 
-## 1. Safes
+## 1. Admin and guardian
 
-On [app.safe.global](https://app.safe.global), switch the network to **Robinhood Chain** and create two Safes:
+Pick one:
 
-1. **Admin Safe:** your owners (for example you plus 2 other wallets or devices), threshold 2.
-2. **Guardian Safe:** different owners or a different threshold. It must be a different address from the admin.
+- **Two Safes** on [app.safe.global](https://app.safe.global) (network: Robinhood Chain). Click "Activate account"
+  on each, so it exists on-chain. Strongest option: you can add co-signers later without redeploying.
+- **Two plain MetaMask wallets**, both new and different from the dev wallet and the keeper. Set
+  `ALLOW_PLAIN_WALLETS=1` in `launch.env`, and save the admin wallet so the scripts can sign timelock actions:
 
-Copy both addresses.
+  ```bash
+  node tools/import-key.js stockfount-admin
+  ```
+
+  Then set `ADMIN_ACCOUNT=stockfount-admin` in `launch.env`. The guardian wallet only needs its address; you use
+  it in MetaMask if you ever need to pause.
 
 ## 2. Dev wallet
 
@@ -100,9 +107,14 @@ Launch it on the Pons website from the dev wallet, or run `./launch-token.sh` (p
 ./set-token.sh 0xTOKEN
 ```
 
-This checks the token and writes two files to `safe-txs/`. In the admin Safe, open Apps > Transaction Builder,
-drag in `set-token-1-schedule.json`, and sign it with the owners. 48 hours later, do the same with
-`set-token-2-execute.json`. `./govern.sh status` shows when it is ready.
+This checks the token. Then:
+
+- **Plain-wallet admin:** `./set-token.sh 0xTOKEN --schedule` now, and `./set-token.sh 0xTOKEN --execute`
+  48 hours later. Each asks for the admin wallet's password.
+- **Safe admin:** it writes two files to `safe-txs/`. In the Safe, open Apps > Transaction Builder, drag in
+  `set-token-1-schedule.json` and sign. 48 hours later, do the same with `set-token-2-execute.json`.
+
+`./govern.sh status` shows when it is ready.
 
 ## 7. Keeper
 
@@ -116,7 +128,7 @@ Variables). It then runs every 15 minutes.
 ./govern.sh register-pool
 ```
 
-Same two-file Safe flow. Once executed, the keeper starts buying and burning $FOUNT with the protocol's 30% share.
+Same flow: `--schedule`, then `--execute` 48 hours later (or the two Safe files). Once executed, the keeper starts buying and burning $FOUNT with the protocol's 30% share.
 Until then, those fees wait safely in `DrawdownRetire`.
 
 ## Troubleshooting
