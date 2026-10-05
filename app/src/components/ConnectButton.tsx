@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useSwitchChain, type Connector } from "wagmi";
 import { shortAddress } from "@/lib/format";
 import { wagmiConfig } from "@/lib/wagmi";
 
-type Panel = { kind: "nowallet" } | { kind: "error"; message: string } | null;
+type Panel = { kind: "nowallet" } | { kind: "pick"; wallets: Connector[] } | { kind: "error"; message: string } | null;
 
 export function ConnectButton() {
   const { address, isConnected, chainId } = useAccount();
@@ -26,11 +26,18 @@ export function ConnectButton() {
 
   async function connect() {
     setPanel(null);
-    // Wallets announced through EIP-6963 first, then the classic window.ethereum injection.
-    const announced = connectors.find((c) => c.type === "injected" && c.id !== "injected");
+    // Wallets announced through EIP-6963 (one connector each), then the classic window.ethereum injection.
+    // With several wallets installed, let the user pick: opening whichever announced first can open the wrong one.
+    const announced = connectors.filter((c) => c.type === "injected" && c.id !== "injected");
+    if (announced.length > 1) return setPanel({ kind: "pick", wallets: announced });
     const hasInjected = typeof window !== "undefined" && Boolean((window as { ethereum?: unknown }).ethereum);
-    const connector = announced ?? (hasInjected ? connectors.find((c) => c.id === "injected") : undefined);
+    const connector = announced[0] ?? (hasInjected ? connectors.find((c) => c.id === "injected") : undefined);
     if (!connector) return setPanel({ kind: "nowallet" });
+    await connectWith(connector);
+  }
+
+  async function connectWith(connector: Connector) {
+    setPanel(null);
     try {
       await connectAsync({ connector });
     } catch (e) {
@@ -66,6 +73,17 @@ export function ConnectButton() {
     <div className="connect" ref={ref}>
       {button}
       {panel?.kind === "nowallet" && <NoWallet />}
+      {panel?.kind === "pick" && (
+        <div className="connect-pop" role="dialog" aria-label="Choose a wallet">
+          <h3>Choose a wallet</h3>
+          {panel.wallets.map((w) => (
+            <button key={w.uid} className="btn wide wallet-option" onClick={() => connectWith(w)}>
+              {w.icon && <img src={w.icon} alt="" width={20} height={20} />}
+              {w.name}
+            </button>
+          ))}
+        </div>
+      )}
       {panel?.kind === "error" && (
         <div className="connect-pop" role="alert">
           <p>{panel.message}</p>

@@ -313,3 +313,6 @@ a.holding:hover { text-decoration: none; }
 .small { font-size: 0.86rem; }
 @media (max-width: 960px) { .guarantees { grid-template-columns: repeat(2, minmax(0, 1fr)); } .safety { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 560px) { .guarantees { grid-template-columns: minmax(0, 1fr); } }
+
+.wallet-option { justify-content: flex-start; gap: 0.6rem; }
+.wallet-option img { border-radius: 5px; flex: none; }
