@@ -11,8 +11,9 @@ removes the Borrow Desk and Basket Program and hardens governance and pricing:
   `TimelockController` with at least a 48-hour delay, and that the deploying wallet cannot propose, execute,
   cancel or administer on it. All settings are passed in at construction, so the deployer never owns anything,
   not even for one block. `scripts/verify.js` proves this on-chain for any deployment.
-- **$FOUNT fixed at deployment.** $FOUNT is launched on Pons first, and `DrawdownRetire` stores it immutably.
-  No account can ever point the buy-and-burn at another token.
+- **$FOUNT set once, by the timelock.** The protocol deploys first. After the Pons launch, the admin Safe sets
+  $FOUNT in `DrawdownRetire` through the 48-hour timelock. It can never be changed after that, and the deployer
+  has no part in it.
 - **Hardened oracle.** Each Chainlink feed has sanity bounds, and USDG must stay within $0.95–$1.05. A
   circuit breaker holds any price that jumped more than 15% from the previous round until it is 30 minutes
   old. The breaker can be tuned through the timelock within hard limits, but never switched off.
@@ -28,34 +29,34 @@ contracts/   Hardhat project (Solidity 0.8.26, OpenZeppelin 5.1, Uniswap v4 MIT 
   src/                    Fount, FountOracle, FeeRouter, DrawdownRetire, FountRegistry
   src/v4/                 FountPositionV4 (PositionManager + Permit2), V4SwapAdapter
   src/governance/         GovernanceChecks (constructor checks), Timelock (OZ TimelockController)
-  test/unit/              146 unit tests on mocks, including governance and oracle hardening
+  test/unit/              150 unit tests on mocks, including governance and oracle hardening
   test/fork/              tests against the live Uniswap v4 pools on a Robinhood Chain fork
   scripts/deploy.js       Step 2: deploys and configures everything in one pass, then verifies it
   scripts/verify.js       Read-only on-chain proof that the deployer holds no power
-keeper/      Off-chain keeper bot: rebalance, harvest, route fees, buy and burn $FOUNT
+keeper/      Off-chain keeper bot: rebalance, harvest, route fees, buy and burn $FOUNT (runs in GitHub Actions)
+tools/       Wallet tools: encrypted keystores, keeper secret, launch.env loader
 app/         Next.js 14 + wagmi/viem interface: Home, Founts, Safety, Portfolio, Docs
 ```
 
-## Launch order
+## Launch
 
-The deployer is a **new wallet used only for this**, and it never holds a role.
+Step by step, with the exact commands: **[docs/LAUNCH.md](docs/LAUNCH.md)**. In short:
 
-1. **Launch $FOUNT on Pons** from the deployer wallet: `cd launch && npm ci && npm run preflight && npm run launch`.
-   See [launch/README.md](launch/README.md).
-2. **Create two multisigs** (for example Safe): the admin, which proposes to the timelock, and the guardian,
-   which can only pause. Pick a keeper hot wallet. All three must differ from each other and from the deployer.
-3. **Preflight** (read-only): `cd contracts && ADMIN_MULTISIG=… GUARDIAN_MULTISIG=… KEEPER_ADDRESS=… FOUNT_TOKEN_ADDRESS=… DEPLOYER_ADDRESS=… npm run preflight`.
-4. **Deploy**: same variables plus `DEPLOYER_PRIVATE_KEY`, then `npm run deploy:robinhood`. The script ends by
-   running the verification. Windows users can run `.\launch.ps1` from the root (it reads `launch.env`), which
-   does steps 3–4 with a fork rehearsal first.
-5. **Publish**: `npm run export-abis`, then commit `contracts/deployments/robinhood.json` and `app/src/generated`.
-6. **Start the keeper** ([keeper/README.md](keeper/README.md)).
-7. **When $FOUNT graduates on Pons**, run `node scripts/register-fount-pool.js`. It prints the timelock
-   transactions for the admin multisig to schedule. Buy-and-burn starts 48 hours later. Until then, fees wait
-   in `DrawdownRetire`.
+```bash
+node tools/import-key.js stockfount-dev   # dev wallet from MetaMask, encrypted
+node tools/wallet.js keeper-secret        # keeper key straight into GitHub Actions
+./launch.sh --rehearsal                   # free full deploy on a copy of the chain
+./launch.sh                               # real deploy (market hours)
+./verify.sh                               # proof the deployer holds nothing
+./set-token.sh 0xTOKEN                    # after the Pons launch: Safe files for the timelock
+./govern.sh register-pool                 # after graduation: start buy-and-burn
+```
 
-**Do not deploy to mainnet before an independent audit** of `Fount`, `FountPositionV4`, `V4SwapAdapter`,
-`FountOracle`, `DrawdownRetire` and `GovernanceChecks`. These contracts hold depositors' money.
+The keeper runs from GitHub Actions every 15 minutes and only sends transactions when the repo variable
+`KEEPER_LIVE` is `1`.
+
+**Do not open the Founts to real deposits before an independent audit** of `Fount`, `FountPositionV4`,
+`V4SwapAdapter`, `FountOracle`, `DrawdownRetire` and `GovernanceChecks`. Launch caps are $25,000 per Fount.
 
 ## Development
 

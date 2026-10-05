@@ -2229,6 +2229,16 @@ export const drawdownRetireAbi = [
   },
   {
     "inputs": [],
+    "name": "FountTokenAlreadySet",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "FountTokenUnset",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "InvalidConfig",
     "type": "error"
   },
@@ -2318,6 +2328,19 @@ export const drawdownRetireAbi = [
       }
     ],
     "name": "Drawdown",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "FountTokenSet",
     "type": "event"
   },
   {
@@ -2730,6 +2753,19 @@ export const drawdownRetireAbi = [
       }
     ],
     "name": "revokeRole",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "contract ERC20Burnable",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "setFountToken",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

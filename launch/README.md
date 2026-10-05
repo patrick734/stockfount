@@ -1,6 +1,6 @@
 # launch
 
-Launches **$FOUNT** on the [Pons](https://ponsfamily.com) V2 launchpad on Robinhood Chain (4663), from the StockFount deployer wallet. This is step 1 of a launch: the protocol contracts are deployed afterwards with the token's address.
+Launches **$FOUNT** on the [Pons](https://ponsfamily.com) V2 launchpad on Robinhood Chain (4663), from the StockFount deployer wallet. Run it from the repo root with `./launch-token.sh`, which signs with the encrypted dev wallet from launch.env.
 
 $FOUNT is not a StockFount contract. It is created by Pons's own verified factory,
 `PonsV2LaunchFactory` at `0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e`
@@ -13,11 +13,8 @@ bonding curve, which graduates into a permanently locked Uniswap V4 pool. The de
 1. Create a **new** wallet in MetaMask or Rabby that is used for nothing else.
 2. Fund it on Robinhood Chain with enough ETH for the Pons launch fee, gas, and any dev buy.
    The preflight prints the exact amount it needs.
-3. Put the key in `launch/.env` (git-ignored), or export it in your shell:
-
-   ```bash
-   cp .env.example .env   # then set DEPLOYER_PRIVATE_KEY=0x...
-   ```
+3. Save it encrypted: `node tools/import-key.js stockfount-dev` from the repo root (see docs/LAUNCH.md).
+   `./launch-token.sh` asks for its password and passes the key to this script for that run only.
 
 Never commit the key, paste it into chat, or put it in a CI secret that runs on pull requests.
 
@@ -44,8 +41,7 @@ Edit `fount.config.json`:
 ## 3. Preflight (sends nothing)
 
 ```bash
-npm ci
-npm run preflight
+./launch-token.sh
 ```
 
 It checks the RPC is Robinhood Chain, the factory exists, launches are open to the wallet,
@@ -55,7 +51,7 @@ the predicted token address.
 ## 4. Launch
 
 ```bash
-npm run launch
+./launch-token.sh --launch
 ```
 
 It runs the same preflight and asks you to type the symbol, then sends the launch. If `devBuyEth` is
@@ -70,11 +66,7 @@ The dev wallet is exempt from the snipe tax either way.
 
 ## After launch
 
-$FOUNT is the token the protocol buys and burns, and `DrawdownRetire` fixes its address at deployment.
-So the order is:
-
-1. Launch $FOUNT here (this folder).
-2. Deploy the protocol with `FOUNT_TOKEN_ADDRESS` set to the new token (`contracts/`, see the root README).
-3. Once $FOUNT graduates on Pons into its Uniswap V4 pool, the admin multisig registers that pool on the
-   swap adapter through the timelock (`node contracts/scripts/register-fount-pool.js`). Buy-and-burn starts
-   after that. Until then, protocol fees wait in `DrawdownRetire`.
+The protocol is usually deployed before $FOUNT exists. After the launch, run `./set-token.sh <token address>`
+from the repo root. It prepares the admin Safe's timelock transaction that sets $FOUNT in `DrawdownRetire`,
+once and for good. Once $FOUNT graduates on Pons, `./govern.sh register-pool` starts the buy-and-burn.
+See [docs/LAUNCH.md](../docs/LAUNCH.md).

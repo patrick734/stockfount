@@ -1,6 +1,6 @@
 // Read-only launch checks. Sends nothing and never needs a private key.
 // Usage: node scripts/preflight.js
-// Env: ADMIN_MULTISIG, GUARDIAN_MULTISIG, KEEPER_ADDRESS, FOUNT_TOKEN_ADDRESS (launch $FOUNT on Pons first),
+// Env: ADMIN_MULTISIG, GUARDIAN_MULTISIG, KEEPER_ADDRESS, FOUNT_TOKEN_ADDRESS (optional; usually set later),
 //      DEPLOYER_ADDRESS (the fresh deployer wallet, for the role and gas checks), ROBINHOOD_RPC_URL (optional).
 // Exits 1 if any check fails, so a launch script can stop before deploying.
 const { ethers } = require("ethers");
@@ -73,7 +73,7 @@ async function main() {
 
   console.log("$FOUNT");
   const w = process.env.FOUNT_TOKEN_ADDRESS;
-  if (!w) fail("FOUNT_TOKEN_ADDRESS is not set: launch $FOUNT on Pons first (launch/), then deploy with its address");
+  if (!w) ok("no $FOUNT yet: deploying first; after the Pons launch, ./set-token.sh prepares the timelock transaction");
   else if (!ethers.isAddress(w)) fail("FOUNT_TOKEN_ADDRESS is not an address");
   else {
     const t = new ethers.Contract(w, ["function symbol() view returns (string)", "function decimals() view returns (uint8)", "function totalSupply() view returns (uint256)", "function burn(uint256)"], provider);

@@ -6,7 +6,7 @@ export type Deployment = {
   network: string;
   chainId: number;
   usdg: `0x${string}`;
-  fountToken: `0x${string}`;
+  fountToken: `0x${string}` | null;
   deployer: `0x${string}`;
   timelock: `0x${string}`;
   roles: { admin: `0x${string}`; guardian: `0x${string}`; keeper: `0x${string}` };

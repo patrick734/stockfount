@@ -13,8 +13,9 @@ import {GovernanceChecks} from "./governance/GovernanceChecks.sol";
 /// @notice Spends protocol fees on $FOUNT and burns every $FOUNT it holds.
 /// @dev There is deliberately no withdrawal or rescue path: assets leave only as burned $FOUNT.
 ///      Keeper runs are capped per input token and rate-limited, bounding what a bad quote can lose.
-///      $FOUNT is launched on Pons before the protocol deploys, so it is fixed here at construction:
-///      no account, including the deployer, can ever point the buy-and-burn at another token.
+///      $FOUNT may be launched on Pons after the protocol deploys. It is then set exactly once, by the
+///      admin (the 48h timelock), and is permanent from that point. The deployer has no part in it.
+///      Until it is set, fees accumulate here and `drawdown` reverts.
 contract DrawdownRetire is AccessControl, ReentrancyGuard {
     /// @notice Release of the StockFount contracts this deployment was built from.
     string public constant VERSION = "1.0.0";
@@ -24,8 +25,8 @@ contract DrawdownRetire is AccessControl, ReentrancyGuard {
     bytes32 public constant GUARDIAN_ROLE = keccak256("GUARDIAN_ROLE");
     bytes32 public constant KEEPER_ROLE = keccak256("KEEPER_ROLE");
 
-    /// @notice The token bought and burned. Fixed at deployment.
-    ERC20Burnable public immutable fountToken;
+    /// @notice The token bought and burned. Set at deployment or once later by the admin; never changes after.
+    ERC20Burnable public fountToken;
     ISwapAdapter public immutable swapAdapter;
 
     uint32 public minInterval;
@@ -40,13 +41,17 @@ contract DrawdownRetire is AccessControl, ReentrancyGuard {
     event InputLimitSet(address indexed token, uint256 maxPerRun);
     event MinIntervalSet(uint32 minInterval);
     event HaltSet(bool halted);
+    event FountTokenSet(address indexed token);
 
     error InvalidConfig();
+    error FountTokenAlreadySet();
+    error FountTokenUnset();
     error IsHalted();
     error OverLimit();
     error TooSoon();
     error SwapShortfall(uint256 received, uint256 minimum);
 
+    /// @param fountToken_ $FOUNT, or zero to set it later through the timelock with `setFountToken`.
     /// @param inputTokens Fee tokens the keeper may spend, with `maxPerRun` caps set atomically here so
     ///        the deployer never needs admin rights to configure them.
     constructor(
@@ -60,11 +65,13 @@ contract DrawdownRetire is AccessControl, ReentrancyGuard {
         uint256[] memory maxPerRun
     ) {
         if (
-            address(fountToken_).code.length == 0 || address(swapAdapter_) == address(0)
+            (address(fountToken_) != address(0) && address(fountToken_).code.length == 0)
+                || address(swapAdapter_) == address(0)
                 || inputTokens.length != maxPerRun.length
         ) revert InvalidConfig();
         GovernanceChecks.requireRoles(admin, guardian, keeper, msg.sender);
         fountToken = fountToken_;
+        if (address(fountToken_) != address(0)) emit FountTokenSet(address(fountToken_));
         swapAdapter = swapAdapter_;
         minInterval = minInterval_;
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
@@ -77,6 +84,16 @@ contract DrawdownRetire is AccessControl, ReentrancyGuard {
         }
     }
 
+    /// @notice Sets $FOUNT for a deployment made before the token launched. Admin (timelock) only, and only once.
+    /// @dev The token must not already be configured as a fee input, since the drawdown would then try to swap
+    ///      $FOUNT into itself; the admin can clear that input limit first.
+    function setFountToken(ERC20Burnable token) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (address(fountToken) != address(0)) revert FountTokenAlreadySet();
+        if (address(token).code.length == 0 || maxInputPerRun[address(token)] != 0) revert InvalidConfig();
+        fountToken = token;
+        emit FountTokenSet(address(token));
+    }
+
     /// @notice Swaps `amountIn` of a fee token into $FOUNT and retires the proceeds.
     function drawdown(IERC20 tokenIn, uint256 amountIn, uint256 minFountOut, bytes calldata route)
         external
@@ -86,6 +103,7 @@ contract DrawdownRetire is AccessControl, ReentrancyGuard {
     {
         if (halted) revert IsHalted();
         ERC20Burnable fount = fountToken;
+        if (address(fount) == address(0)) revert FountTokenUnset();
         if (
             address(tokenIn) == address(fount) || amountIn == 0 || minFountOut == 0
                 || amountIn > maxInputPerRun[address(tokenIn)]
@@ -105,8 +123,9 @@ contract DrawdownRetire is AccessControl, ReentrancyGuard {
         _retire(fount.balanceOf(address(this)));
     }
 
-    /// @notice Burns any $FOUNT sent here directly. Callable by anyone.
+    /// @notice Burns any $FOUNT sent here directly. Callable by anyone. Does nothing before $FOUNT is set.
     function retireHeld() external nonReentrant {
+        if (address(fountToken) == address(0)) return;
         _retire(fountToken.balanceOf(address(this)));
     }
 

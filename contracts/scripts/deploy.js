@@ -2,14 +2,15 @@
 // from its first block: the deployer wallet ends with no role, no ownership and nothing pending.
 //
 //   Local demo (mocks, seeded):  npx hardhat run scripts/deploy.js
-//   Fork dry run:                FORK=1 DEPLOY_LIVE=1 FOUNT_TOKEN_ADDRESS=0x... npx hardhat run scripts/deploy.js
+//   Fork dry run:                FORK=1 DEPLOY_LIVE=1 npx hardhat run scripts/deploy.js
 //   Robinhood Chain:             npx hardhat run scripts/deploy.js --network robinhood
 //
 // Live deploys read from env:
 //   ADMIN_MULTISIG       proposer/executor of the timelock (a multisig contract)
 //   GUARDIAN_MULTISIG    may pause and lower caps (a different multisig contract)
 //   KEEPER_ADDRESS       rebalances, harvests and runs buy-and-burn (a hot wallet, not the deployer)
-//   FOUNT_TOKEN_ADDRESS  $FOUNT, launched on Pons first with launch/ (must support burn(uint256))
+//   FOUNT_TOKEN_ADDRESS  optional: $FOUNT if it is already launched on Pons. Usually left empty: the protocol
+//                        deploys first and the timelock sets $FOUNT once after the Pons launch (set-token.sh).
 const fs = require("fs");
 const path = require("path");
 const { ethers, network } = require("hardhat");
@@ -18,7 +19,8 @@ const { equityFeedInit, usdgInit } = require("./lib/oracle-config");
 const { verifyDeployment } = require("./verify");
 
 const LIVE = network.name === "robinhood" || process.env.DEPLOY_LIVE === "1";
-const REAL_ROLES = network.name === "robinhood";
+// Real role addresses: always on mainnet, and in a fork rehearsal when launch.env provides them.
+const REAL_ROLES = network.name === "robinhood" || (LIVE && Boolean(process.env.ADMIN_MULTISIG));
 const TIMELOCK_DELAY = 48 * 3600;
 const usdgUnits = (n) => ethers.parseUnits(String(n), 6);
 const wad = (n) => ethers.parseEther(String(n));
@@ -47,8 +49,16 @@ async function main() {
   const env = LIVE ? liveEnv() : await localEnv(out.timelock);
   out.usdg = env.usdg;
 
-  const fountToken = LIVE ? await existingFountToken(required("FOUNT_TOKEN_ADDRESS")) : env.fountToken;
-  out.fountToken = await fountToken.getAddress();
+  // DEPLOY_WITHOUT_TOKEN=1 makes the local demo start without $FOUNT too, to rehearse set-token.sh.
+  const fountToken = LIVE
+    ? process.env.FOUNT_TOKEN_ADDRESS
+      ? await existingFountToken(required("FOUNT_TOKEN_ADDRESS"))
+      : null
+    : process.env.DEPLOY_WITHOUT_TOKEN === "1"
+      ? null
+      : env.fountToken;
+  out.fountToken = fountToken ? await fountToken.getAddress() : null;
+  if (!fountToken) console.log(`  ${"$FOUNT".padEnd(18)} not launched yet: set it after the Pons launch with ./set-token.sh`);
 
   const tickers = config.launch.founts;
   const feedInits = [];
@@ -87,7 +97,7 @@ async function main() {
   const inputTokens = [env.usdg, ...tickers.map((t) => env.equity[t].address)];
   const inputLimits = [usdgUnits(config.launch.drawdownMaxUsdgPerRun), ...tickers.map(() => wad(config.launch.drawdownMaxEquityPerRun))];
   const drawdown = await deploy("DrawdownRetire", [
-    out.fountToken,
+    out.fountToken ?? ethers.ZeroAddress,
     out.swapAdapter,
     out.timelock,
     roles.guardian,

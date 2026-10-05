@@ -77,7 +77,10 @@ async function verifyDeployment(ethers, d, { requireMultisigs = false } = {}) {
 
   console.log("Wiring");
   const drawdown = await ethers.getContractAt("DrawdownRetire", d.drawdownRetire);
-  check(same(await drawdown.fountToken(), d.fountToken), "DrawdownRetire burns $FOUNT");
+  const onChainToken = await drawdown.fountToken();
+  if (d.fountToken) check(same(onChainToken, d.fountToken), `DrawdownRetire burns $FOUNT ${d.fountToken}`);
+  else if (same(onChainToken, ethers.ZeroAddress)) console.log("  info  $FOUNT not set yet: fees wait in DrawdownRetire until the timelock sets it (set-token.sh)");
+  else console.log(`  info  $FOUNT set on-chain to ${onChainToken} (deployment file not updated yet)`);
   const router = await ethers.getContractAt("FeeRouter", d.feeRouter);
   check(same(await router.drawdownRetire(), d.drawdownRetire) && same(await router.pendingDrawdownRetire(), ethers.ZeroAddress), "FeeRouter sends to DrawdownRetire, no change pending");
   const oracle = await ethers.getContractAt("FountOracle", d.oracle);

@@ -7,7 +7,7 @@
 | Admin | OpenZeppelin `TimelockController`, 48h minimum delay, proposer and executor = admin multisig, no external admin | unpause, raise caps, change fees (within code caps), risk limits, feeds, bounds, breaker settings and pools, all after 48h in public | move user funds; raise the protocol share above 30%; turn off the circuit breaker; change the $FOUNT token |
 | Guardian | A second multisig | pause deposits and rebalancing, lower caps, halt drawdowns | unpause, raise anything, move funds |
 | Keeper | Hot wallet | rebalance within oracle-checked loss limits (at most 3%), harvest, run buy-and-burn within per-run caps and a minimum interval | anything else |
-| Deployer | Fresh wallet | launch $FOUNT on Pons; bind each position to its Fount once, in the deploy transaction sequence | **nothing after deployment**: no role, no ownership, no pending ownership, no timelock rights |
+| Deployer | Fresh wallet | launch $FOUNT on Pons (it receives the Pons creator fees); bind each position to its Fount once, in the deploy transaction sequence | **nothing after deployment**: no role, no ownership, no pending ownership, no timelock rights |
 
 ## What changed from Stonkwell, and why
 
@@ -15,7 +15,7 @@
 |---|---|---|
 | Ownership of oracle, swap adapter, registry | Deployer EOA, then `transferOwnership` to the timelock, which must `acceptOwnership` 48h later. The deployer keeps control during that window. | Timelock is the owner from the constructor. Feeds, pools, hooks and listings are constructor arguments. No window. |
 | `DrawdownRetire` admin | Deployer during setup, then handed over | Timelock from the constructor. Input limits are constructor arguments. |
-| $FOUNT / $WELL address | Could be set once later by the deployer (`setWellToken`) | Immutable constructor argument. The token is launched on Pons before deploying. |
+| $FOUNT / $WELL address | Could be set once later by the deployer (`setWellToken`) | Set at deployment, or once later **by the timelock** (`setFountToken`, admin only). The deployer has no part in it. |
 | Admin type | Not checked on-chain | `GovernanceChecks.requireTimelock`: admin must report `getMinDelay() >= 48h`, and the deployer must hold none of the timelock's admin, proposer, executor or canceller roles. Otherwise the constructor reverts. |
 | Guardian and keeper | Guardian ≠ admin checked in some contracts | Guardian, keeper and admin pairwise distinct, and neither guardian nor keeper is the deployer, checked in every contract with roles |
 | Oracle | Freshness and positivity only | Plus per-feed `[minAnswer, maxAnswer]`, USDG bounds, a round-to-round circuit breaker, and a `status()` view saying why a token is unpriced |

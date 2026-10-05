@@ -16,7 +16,7 @@ describe("DrawdownRetire (extra coverage)", function () {
       const ctx = await loadFixture(baseFixture);
       const F = await ethers.getContractFactory("DrawdownRetire");
       const base = [ctx.fountToken.target, ctx.swap.target, ctx.admin.address, ctx.guardian.address, ctx.keeper.address, 3600, [], []];
-      for (const [idx, value] of [[0, ethers.ZeroAddress], [0, ctx.alice.address], [1, ethers.ZeroAddress]]) {
+      for (const [idx, value] of [[0, ctx.alice.address], [1, ethers.ZeroAddress]]) {
         const args = [...base];
         args[idx] = value;
         await expect(F.deploy(...args)).to.be.revertedWithCustomError(F, "InvalidConfig");
@@ -80,6 +80,7 @@ describe("DrawdownRetire (extra coverage)", function () {
         "revokeRole",
         "setInputLimit",
         "setMinInterval",
+        "setFountToken",
       ].sort()
     );
   });

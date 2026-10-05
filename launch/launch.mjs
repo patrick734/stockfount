@@ -203,4 +203,4 @@ if (config.devBuyWei > 0n) {
 }
 
 console.log(`\nSaved ${recordPath}`);
-console.log(`Next: deploy the protocol with FOUNT_TOKEN_ADDRESS=${token} (see contracts/README.md, "Deploying").`);
+console.log(`Next: ./set-token.sh ${token}   (prepares the admin Safe transaction that sets $FOUNT)`);
