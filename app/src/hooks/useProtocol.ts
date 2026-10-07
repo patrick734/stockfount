@@ -5,9 +5,10 @@ import { erc20Abi, parseAbiItem, zeroAddress, type Address } from "viem";
 import { usePublicClient, useReadContracts } from "wagmi";
 import { drawdownRetireAbi, fountOracleAbi, fountPositionV4Abi } from "@/generated/abis";
 import { useDeployment } from "@/lib/deployment";
+import { FOUNT_CA } from "@/lib/links";
 
-/// $FOUNT's address. The protocol deploys before $FOUNT launches on Pons, so the deployment file may record
-/// none; the token is then read from DrawdownRetire, where the timelock sets it once. `pending` is true until then.
+/// $FOUNT's address: the deployment file's, else the one DrawdownRetire holds (the timelock sets it once), else the
+/// launched token's published CA while that timelock action is still waiting. `pending` is true only when none is known.
 export function useFountToken(): { token: Address | undefined; pending: boolean } {
   const { deployment, chainId } = useDeployment();
   const fixed = deployment?.fountToken ?? undefined;
@@ -17,8 +18,8 @@ export function useFountToken(): { token: Address | undefined; pending: boolean 
     contracts: [{ address: deployment?.drawdownRetire, abi: drawdownRetireAbi, chainId, functionName: "fountToken" }],
   });
   const onChain = data?.[0]?.status === "success" ? (data[0].result as Address) : undefined;
-  const token = fixed ?? (onChain && onChain !== zeroAddress ? onChain : undefined);
-  return { token, pending: Boolean(deployment && !fixed && onChain === zeroAddress) };
+  const token = fixed ?? (onChain && onChain !== zeroAddress ? onChain : FOUNT_CA);
+  return { token, pending: !token };
 }
 
 /// Protocol fees not yet spent on $FOUNT: USDG and Equity Tokens sitting in the FeeRouter and in DrawdownRetire,

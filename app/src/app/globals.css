@@ -316,3 +316,10 @@ a.holding:hover { text-decoration: none; }
 
 .wallet-option { justify-content: flex-start; gap: 0.6rem; }
 .wallet-option img { border-radius: 5px; flex: none; }
+
+/* $FOUNT CA */
+.ca { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 1.4rem; padding: 0.7rem 0.9rem; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; max-width: 640px; }
+.ca-label { font-family: var(--mono); font-size: 0.75rem; font-weight: 700; background: var(--burn); color: #fff; border-radius: 6px; padding: 2px 8px; }
+.ca-addr { font-family: var(--mono); font-size: 0.82rem; white-space: nowrap; flex: 1 1 auto; min-width: 0; }
+.ca-actions { display: flex; gap: 6px; }
+@media (max-width: 720px) { .ca-addr { white-space: normal; overflow-wrap: anywhere; flex-basis: 100%; font-size: 0.74rem; } }

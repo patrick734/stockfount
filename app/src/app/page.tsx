@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { FeeSplit } from "@/components/FeeSplit";
+import { FountCA } from "@/components/FountCA";
 import { HomeStats } from "@/components/HomeStats";
 import { Ripple } from "@/components/Ripple";
 import { FountBoard } from "@/components/FountBoard";
@@ -54,6 +55,7 @@ export default function Home() {
           <div className="hero-note">
             {catalog.launchFounts.length} Founts · ${catalog.heldValueCapUsdg.toLocaleString()} cap each · 70 / 30 split enforced in code
           </div>
+          <FountCA />
         </div>
         <FountBoard />
       </section>
